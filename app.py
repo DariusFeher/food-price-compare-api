@@ -16,6 +16,7 @@ from nltk.stem import WordNetLemmatizer
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
 nltk.download('universal_tagset')
+nltk.download('wordnet')
 
 def clean_mention(sentence):
   wnl = WordNetLemmatizer()
