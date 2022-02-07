@@ -187,7 +187,7 @@ def get_linked_products(mention, kb_data, kb_tokens):
     linked_product_concept = entities_similarities[0]
     most_similar_products_from_concept = sorted(scores[linked_product_concept[0]], key=lambda tuple: tuple[1], reverse=True)
     products = []
-    for i in range(3):
+    for i in range(min(len(most_similar_products_from_concept), 3)):
         tuple = most_similar_products_from_concept[i]
         pos = tuple[0]
         score = tuple[1]
@@ -233,7 +233,7 @@ def clean_mention(mention):
   mention = strip_multiple_whitespaces(mention)
   mention = strip_short(mention, 2)
 
-  mention = re.sub(r'\(.*oz.\)|(®)|$pint(s)*$|$kg$|$mg$|$tesco$|$pack$|$portion(s)*$|tast|$sprig$|$inch$|$purpose$|$flmy$|$taste$|boneless|skinless|chunks|fresh|$large$|cook drain|green|frozen|$ground$|tablespoon|teaspoon|cup','',mention).strip()
+  mention = re.sub(r'\(.*oz.\)|(®)|\bpint(s)*\b|\bkg\b|\bmg\b|\btesco\b|\bpack\b|\bportion(s)*\b|tast|\bsprig\b|\binch\b|\bpurpose\b|\bflmy\b|\btaste\b|boneless|skinless|chunks|fresh|\blarge\b|cook drain|green|frozen|\bground\b|tablespoon|teaspoon|\bcup\b','',mention).strip()
 
   tokens = word_tokenize(mention)
   tags = nltk.pos_tag(tokens, tagset='universal')

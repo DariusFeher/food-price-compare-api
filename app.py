@@ -32,10 +32,11 @@ model = Word2Vec.load("word2vec.model")
 
 @app.route('/api/food/', methods=['GET'])
 def api_id():
+    print(last_time_loaded_tesco_kb)
     # Check if an ID was provided as part of the URL.
     # If ID is provided, assign it to a variable.
-    # If no ID is provided, display an error in the browser.
-    if 'item' in request.args:
+    # If no item is provided, display an error in the browser.
+    if 'item' in request.args and request.args['item']:
         food_item = request.args['item']
     else:
         return "Error: No food item field provided. Please specify a food item (e.g. ?item=tomato)."
@@ -66,8 +67,12 @@ if __name__ == '__main__':
     connection.commit()
     record = cursor.fetchone()
     if record:
-      tesco_kb_data = record[0]
-      tesco_protected_tokens = set(record[1])
+      global tesco_kb_data, tesco_protected_tokens, last_time_loaded_tesco_kb
+      tesco_kb_data = record[1]
+      tesco_protected_tokens = set(record[0])
+    #   print(len(tesco_kb_data))
+    #   print(len(tesco_protected_tokens))
+    #   print(tesco_kb_data)
       # tesco_protected_tokens = pickle.load(open("/Users/dariusmarianfeher/Documents/ThirdYearProject/tesco_protected_tokens.pickle", 'rb'))
       last_time_loaded_tesco_kb = datetime.now(tz)
     app.run(debug=True, host='0.0.0.0')
