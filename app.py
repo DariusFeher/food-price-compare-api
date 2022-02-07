@@ -65,8 +65,9 @@ if __name__ == '__main__':
     cursor.execute(insert_query)
     connection.commit()
     record = cursor.fetchone()
-    tesco_kb_data = json.loads(record[0])
-    tesco_protected_tokens = json.loads(record[1])
-    # tesco_protected_tokens = pickle.load(open("/Users/dariusmarianfeher/Documents/ThirdYearProject/tesco_protected_tokens.pickle", 'rb'))
-    last_time_loaded_tesco_kb = datetime.now(tz)
+    if record:
+      tesco_kb_data = record[0]
+      tesco_protected_tokens = set(record[1])
+      # tesco_protected_tokens = pickle.load(open("/Users/dariusmarianfeher/Documents/ThirdYearProject/tesco_protected_tokens.pickle", 'rb'))
+      last_time_loaded_tesco_kb = datetime.now(tz)
     app.run(debug=True, host='0.0.0.0')
