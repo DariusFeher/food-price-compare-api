@@ -1,74 +1,34 @@
-import flask
+import codecs
 import io
+import json
+import os
+import pickle
 import string
 import time
-import os
-import numpy as np
-from flask import Flask, jsonify, request
+from datetime import datetime
 
+import flask
+import numpy as np
+import psycopg2
+import pytz
+from flask import Flask, jsonify, request
 from gensim.models import Word2Vec
-from gensim.parsing.preprocessing import remove_stopwords, strip_punctuation, strip_numeric, strip_non_alphanum, strip_multiple_whitespaces, strip_short
-from nltk import word_tokenize
+
+tz = pytz.timezone('Europe/London')
+
 import nltk
-import re
-from nltk.stem import WordNetLemmatizer
+
+from utils import (clean_mention, get_linked_products, jaro_distance,
+                   jaro_Winkler)
 
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
 nltk.download('universal_tagset')
 nltk.download('wordnet')
 
-def clean_mention(sentence):
-  wnl = WordNetLemmatizer()
-  copy_sentence = sentence
-  sentence = remove_stopwords(sentence)
-  sentence = sentence.lower()
-  sentence = strip_numeric(sentence)
-  sentence = strip_punctuation(sentence)
-  sentence = strip_non_alphanum(sentence)
-  sentence = strip_multiple_whitespaces(sentence)
-  sentence = strip_short(sentence,2)
-
-  sentence = re.sub(r'\(.*oz.\)|(®)|pint(s)*|tesco|pack|portion(s)*|tast|sprig|inch|purpose|flmy|taste|boneless|skinless|chunks|fresh|large|cook drain|green|frozen|ground|tablespoon|teaspoon|cup','',sentence).strip()
-
-  tokens = word_tokenize(sentence)
-  tags = nltk.pos_tag(tokens, tagset='universal')
-  tokens_sentence = [wnl.lemmatize(tag[0]) if tag[1] == 'NOUN' else tag[0] for tag in tags]
-  sentence = ' '.join(token for token in tokens_sentence)
-  return sentence
+app = Flask(__name__)
 
 model = Word2Vec.load("word2vec.model")
-
-def get_vector_representation(foodname):
-  result = None
-  foodname = clean_mention(foodname)
-  if ' ' in foodname:
-    ngram = foodname.lower().replace(' ', '_')
-    if ngram in model.wv:
-      result = model.wv[ngram]
-      #print('BRANCH 1:' + str(result.shape))
-      return result
- 
-  vector_list = []
-  for word in foodname.split(' '):
-    if word in model.wv:
-      vector_list.append(model.wv[word])
-  if len(vector_list) < 1:
-    result = None
-  else:
-    result = np.mean(vector_list, axis=0)
-  #print('BRANCH 2:' + str(result.shape))
-  return result
- 
-
-def predict_most_similar(food):
-    food_avg_vector = get_vector_representation(food)
-    if food_avg_vector is not None:
-        return model.wv.similar_by_vector(food_avg_vector)
-    return None
-
-
-app = Flask(__name__)
 
 @app.route('/api/food/', methods=['GET'])
 def api_id():
@@ -81,17 +41,32 @@ def api_id():
         return "Error: No food item field provided. Please specify a food item (e.g. ?item=tomato)."
 
     # Create an empty list for our results
-    results = predict_most_similar(food_item)
+    results = get_linked_products(food_item, tesco_kb_data, tesco_protected_tokens)
     if results:
         # Use the jsonify function from Flask to convert our list of
         # Python dictionaries to the JSON format.
         return jsonify(results)
     return jsonify([])
-
+    
 @app.route('/', methods=['GET'])
 def index():
-    return 'Machine Learning Inference'
+    return 'Food price comparator Interface'
 
 
 if __name__ == '__main__':
+    connection = psycopg2.connect(user="doadmin",
+                              password="ovQrVQuXgQsDlp2i",
+                              host="app-af20c605-75f8-45be-9aa4-92d508f1d985-do-user-10787135-0.b.db.ondigitalocean.com",
+                              port="25060",
+                              database="defaultdb")
+    cursor = connection.cursor()
+    insert_query = """ SELECT protected_tokens, products_data
+                      FROM supermarkets_data_tescodata;"""
+    cursor.execute(insert_query)
+    connection.commit()
+    record = cursor.fetchone()
+    tesco_kb_data = json.loads(record[0])
+    tesco_protected_tokens = json.loads(record[1])
+    # tesco_protected_tokens = pickle.load(open("/Users/dariusmarianfeher/Documents/ThirdYearProject/tesco_protected_tokens.pickle", 'rb'))
+    last_time_loaded_tesco_kb = datetime.now(tz)
     app.run(debug=True, host='0.0.0.0')
