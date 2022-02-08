@@ -30,9 +30,37 @@ app = Flask(__name__)
 
 model = Word2Vec.load("word2vec.model")
 
+NUMBER_OF_SECONDS = 86400 # Seconds in a day / 24hrs
+
+last_time_loaded_tesco_kb = None
+
+connection = psycopg2.connect(user="doadmin",
+                              password="ovQrVQuXgQsDlp2i",
+                              host="app-af20c605-75f8-45be-9aa4-92d508f1d985-do-user-10787135-0.b.db.ondigitalocean.com",
+                              port="25060",
+                              database="defaultdb")
+cursor = connection.cursor()
+
+def update_tesco_data():
+    global tesco_kb_data, tesco_protected_tokens, last_time_loaded_tesco_kb
+    insert_query = """SELECT protected_tokens, products_data
+                      FROM supermarkets_data_tescodata;"""
+    cursor.execute(insert_query)
+    connection.commit()
+    record = cursor.fetchone()
+    if record:
+        global tesco_kb_data, tesco_protected_tokens
+        tesco_kb_data = record[1]
+        tesco_protected_tokens = set(record[0])
+        last_time_loaded_tesco_kb = datetime.now(tz)
+
 @app.route('/api/food/', methods=['GET'])
 def api_id():
-    print(last_time_loaded_tesco_kb)
+    # print(last_time_loaded_tesco_kb)
+    global last_time_loaded_tesco_kb
+    if last_time_loaded_tesco_kb and (datetime.now(tz) - last_time_loaded_tesco_kb).total_seconds() >= NUMBER_OF_SECONDS:
+        update_tesco_data()
+
     # Check if an ID was provided as part of the URL.
     # If ID is provided, assign it to a variable.
     # If no item is provided, display an error in the browser.
@@ -55,24 +83,5 @@ def index():
 
 
 if __name__ == '__main__':
-    connection = psycopg2.connect(user="doadmin",
-                              password="ovQrVQuXgQsDlp2i",
-                              host="app-af20c605-75f8-45be-9aa4-92d508f1d985-do-user-10787135-0.b.db.ondigitalocean.com",
-                              port="25060",
-                              database="defaultdb")
-    cursor = connection.cursor()
-    insert_query = """ SELECT protected_tokens, products_data
-                      FROM supermarkets_data_tescodata;"""
-    cursor.execute(insert_query)
-    connection.commit()
-    record = cursor.fetchone()
-    if record:
-      global tesco_kb_data, tesco_protected_tokens, last_time_loaded_tesco_kb
-      tesco_kb_data = record[1]
-      tesco_protected_tokens = set(record[0])
-    #   print(len(tesco_kb_data))
-    #   print(len(tesco_protected_tokens))
-    #   print(tesco_kb_data)
-      # tesco_protected_tokens = pickle.load(open("/Users/dariusmarianfeher/Documents/ThirdYearProject/tesco_protected_tokens.pickle", 'rb'))
-      last_time_loaded_tesco_kb = datetime.now(tz)
+    update_tesco_data()
     app.run(debug=True, host='0.0.0.0')
