@@ -160,66 +160,44 @@ def get_mention_similarity_score_for_pair(mention, entity, kb_tokens, processed_
 def get_linked_products(mention, kb_data, kb_tokens):
     mention = clean_mention(mention)
     entities_similarities = []
-    
-    if mention in kb_data:
-        return kb_data[mention][:10]
-
     processed_mention = process_mention(mention, 0.91, kb_tokens) # Process the mention, i.e. remove any tokens which are not similar enough to the ones we have in KB
-
-    scores = {}
-    for concept in kb_data:
-        scores[concept] = []
-        current_score = get_mention_similarity_score_for_pair(mention=mention, entity=concept, kb_tokens=kb_tokens, processed_mention=processed_mention)
-        # current_score = jaro_distance(mention, concept)
-        max_score = current_score
-        pos = 0
-        for entity in kb_data[concept]:
-            current_score = get_mention_similarity_score_for_pair(mention=mention, entity=entity['cleaned_full_name'], kb_tokens=kb_tokens, processed_mention=processed_mention)
-            # current_score = jaro_distance(mention, entity['cleaned_full_name'])
-            max_score = max(max_score, current_score)
-            scores[concept].append((pos, current_score))
-            pos += 1
+    
+    if mention not in kb_data:
+        scores = {}
+        for concept in kb_data:
+            scores[concept] = []
+            current_score = get_mention_similarity_score_for_pair(mention=mention, entity=concept, kb_tokens=kb_tokens, processed_mention=processed_mention)
+            max_score = current_score
+            pos = 0
+            for entity in kb_data[concept]:
+                current_score = get_mention_similarity_score_for_pair(mention=mention, entity=entity['cleaned_full_name'], kb_tokens=kb_tokens, processed_mention=processed_mention)
+                max_score = max(max_score, current_score)
+                scores[concept].append((pos, current_score))
+                pos += 1
             if max_score == 1.0:
                 break
-        entities_similarities.append((concept, max_score))
+            entities_similarities.append((concept, max_score))
 
-    entities_similarities = sorted(entities_similarities, key=lambda tuple: tuple[1], reverse=True)
-    linked_product_concept = entities_similarities[0]
-    most_similar_products_from_concept = sorted(scores[linked_product_concept[0]], key=lambda tuple: tuple[1], reverse=True)
+            entities_similarities = sorted(entities_similarities, key=lambda tuple: tuple[1], reverse=True)
+            linked_product_concept = entities_similarities[0][0]
+            most_similar_products_from_concept = sorted(scores[linked_product_concept], key=lambda tuple: tuple[1], reverse=True)
+    else:
+        pos = 0
+        scores = {}
+        scores[mention] = []
+        for entity in kb_data[mention]:
+            current_score = get_mention_similarity_score_for_pair(mention=mention, entity=entity['cleaned_full_name'], kb_tokens=kb_tokens, processed_mention=processed_mention)
+            scores[mention].append((pos, current_score))
+            pos += 1
+        most_similar_products_from_concept = sorted(scores[mention], key=lambda tuple: tuple[1], reverse=True)
+        linked_product_concept = mention
     products = []
     for i in range(min(len(most_similar_products_from_concept), 3)):
         tuple = most_similar_products_from_concept[i]
         pos = tuple[0]
-        score = tuple[1]
-        products.append(kb_data[linked_product_concept[0]][pos])
-        # print(kb_data[linked_product_concept[0]][pos]['cleaned_full_name'])
-        # print(get_mention_similarity_score_for_pair(mention, kb_data[linked_product_concept[0]][pos]['cleaned_full_name'], kb_tokens, processed_mention))
-        # print(score)
+        products.append(kb_data[linked_product_concept][pos])
+    products = sorted(products, key=lambda d: d['price']) 
     return products
-#   for item in entities_similarities:
-#       if item[0] not in concepts:
-#           concepts[item[0]] = {
-#                                 'nr' : 0,
-#                                 'sum_scores' : 0
-#                                }
-#       concepts[item[0]]['nr'] += 1
-#       concepts[item[0]]['sum_scores'] += 1
-#   for item in concepts:
-#       if concepts[item]['sum_scores'] / concepts[item]['nr'] > max_score:
-#           max_score = concepts[item]['sum_scores'] / concepts[item]['nr'] 
-#           max_concept = item
-#   print(max_concept, max_score)
-#   print(entities_similarities)
-#   print(len(kb_data[max_concept]))
-
-    # print('tamarind' in kb_tokens)
-    # print(process_mention('east end tamarind sauce', 0.91, kb_tokens))
-    # print(len(kb_tokens))
-    # print(jaro_distance('tamarind', process_mention('east end tamarind sauce', 0.91, kb_tokens)))
-    # print(get_mention_similarity_score_for_pair(mention='sour cream', entity='sour cream creme fraiche', kb_tokens=kb_tokens))
-
-
-
 
 def clean_mention(mention):
 
