@@ -192,10 +192,14 @@ def get_linked_products(mention, kb_data, kb_tokens):
         most_similar_products_from_concept = sorted(scores[mention], key=lambda tuple: tuple[1], reverse=True)
         linked_product_concept = mention
     products = []
+    ids = set()
     for i in range(min(len(most_similar_products_from_concept), 3)):
         tuple = most_similar_products_from_concept[i]
         pos = tuple[0]
-        products.append(kb_data[linked_product_concept][pos])
+        product = kb_data[linked_product_concept][pos]
+        if product['id'] not in ids:
+            products.append(product)
+            ids.add(product['id'])
     products = sorted(products, key=lambda d: d['price']) 
     return products
 
