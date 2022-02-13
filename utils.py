@@ -136,7 +136,6 @@ def process_mention(mention, threshold, kb_tokens):
 
 def get_mention_similarity_score_for_pair(mention, entity, kb_tokens, processed_mention, threshold=0.91):
     copy_mention = mention 
-    
     similarity1 = jaro_distance(mention, entity) # Score before processing
     highest_sim = similarity1
     mention = processed_mention
@@ -157,7 +156,7 @@ def get_mention_similarity_score_for_pair(mention, entity, kb_tokens, processed_
 
     return highest_sim
 
-def get_linked_products(mention, kb_data, kb_tokens):
+def get_linked_tesco_products(mention, kb_data, kb_tokens):
     mention = clean_mention(mention)
     entities_similarities = []
     processed_mention = process_mention(mention, 0.91, kb_tokens) # Process the mention, i.e. remove any tokens which are not similar enough to the ones we have in KB
@@ -178,9 +177,9 @@ def get_linked_products(mention, kb_data, kb_tokens):
                 break
             entities_similarities.append((concept, max_score))
 
-            entities_similarities = sorted(entities_similarities, key=lambda tuple: tuple[1], reverse=True)
-            linked_product_concept = entities_similarities[0][0]
-            most_similar_products_from_concept = sorted(scores[linked_product_concept], key=lambda tuple: tuple[1], reverse=True)
+        entities_similarities = sorted(entities_similarities, key=lambda tuple: tuple[1], reverse=True)
+        linked_product_concept = entities_similarities[0][0]
+        most_similar_products_from_concept = sorted(scores[linked_product_concept], key=lambda tuple: tuple[1], reverse=True)
     else:
         pos = 0
         scores = {}
@@ -201,6 +200,43 @@ def get_linked_products(mention, kb_data, kb_tokens):
             products.append(product)
             ids.add(product['id'])
     products = sorted(products, key=lambda d: d['price']) 
+    return products
+
+def get_linked_amazon_products(mention, kb_data, kb_tokens, kb_entities):
+    copy_mention = mention
+    mention = clean_mention(mention)
+    entities_similarities = []
+    processed_mention = process_mention(mention, 0.91, kb_tokens) # Process the mention, i.e. remove any tokens which are not similar enough to the ones we have in KB
+    products = []
+    if copy_mention in kb_entities:
+        products = []
+        for prod_id in kb_entities[copy_mention]:
+            products.append(kb_data[prod_id])
+    if mention in kb_entities:
+        products = []
+        for prod_id in kb_entities[mention]:
+            products.append(kb_data[prod_id])
+    elif processed_mention in kb_entities:
+        products = []
+        for prod_id in kb_entities[processed_mention]:
+            products.append(kb_data[prod_id])
+    else:
+        ids = set()
+        for id in kb_data:
+            concept = kb_data[id]['cleaned_full_name']
+            current_score = get_mention_similarity_score_for_pair(mention=mention, entity=concept, kb_tokens=kb_tokens, processed_mention=processed_mention)
+            max_score = current_score
+            entities_similarities.append((id, max_score))
+
+        entities_similarities = sorted(entities_similarities, key=lambda tuple: tuple[1], reverse=True)[:3]
+        
+        for tuple in entities_similarities:
+            product = kb_data[tuple[0]]
+            if product['id'] not in ids:
+                products.append(product)
+                ids.add(product['id'])
+        products = sorted(products, key=lambda d: d['price'])
+
     return products
 
 def clean_mention(mention):
