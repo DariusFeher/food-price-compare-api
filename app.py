@@ -18,7 +18,7 @@ tz = pytz.timezone('Europe/London')
 
 import nltk
 
-from utils import (clean_mention, get_linked_tesco_products, get_linked_amazon_products, jaro_distance,
+from utils import (clean_mention, get_linked_tesco_products, get_linked_amazon_or_sainsburys_products, jaro_distance,
                    jaro_Winkler)
 
 nltk.download('punkt')
@@ -68,12 +68,28 @@ def update_amazon_data():
         print(len(amazon_protected_tokens))
         print(len(amazon_entities_with_ids))
 
+def update_sainsburys_data():
+    global sainsburys_kb_data, sainsburys_protected_tokens, last_time_loaded_kb, sainsburys_entities_with_ids
+    insert_query = """SELECT protected_tokens, products_data, products_entities
+                      FROM supermarkets_data_sainsburysdata;"""
+    cursor.execute(insert_query)
+    connection.commit()
+    record = cursor.fetchone()
+    if record:
+        sainsburys_kb_data = record[1]
+        sainsburys_protected_tokens = set(record[0])
+        sainsburys_entities_with_ids = record[2]
+        print(len(sainsburys_kb_data))
+        print(len(sainsburys_protected_tokens))
+        print(len(sainsburys_entities_with_ids))
+
 @app.route('/api/food/tesco/', methods=['GET'])
 def get_tesco_prices():
     # print(last_time_loaded_tesco_kb)
     global last_time_loaded_kb
     if last_time_loaded_kb and (datetime.now(tz) - last_time_loaded_kb).total_seconds() >= NUMBER_OF_SECONDS:
         update_tesco_data()
+        update_sainsburys_data()
 
     # Check if an ID was provided as part of the URL.
     # If ID is provided, assign it to a variable.
@@ -94,9 +110,10 @@ def get_tesco_prices():
 @app.route('/api/food/amazonfresh/', methods=['GET'])
 def get_amazon_prices():
     # print(last_time_loaded_tesco_kb)
-    global last_time_loaded_kb
-    if last_time_loaded_kb and (datetime.now(tz) - last_time_loaded_kb).total_seconds() >= NUMBER_OF_SECONDS:
-        update_tesco_data()
+    # global last_time_loaded_kb
+    # if last_time_loaded_kb and (datetime.now(tz) - last_time_loaded_kb).total_seconds() >= NUMBER_OF_SECONDS:
+    #     update_tesco_data()
+    #     update_amazon_data()
 
     # Check if an ID was provided as part of the URL.
     # If ID is provided, assign it to a variable.
@@ -107,7 +124,31 @@ def get_amazon_prices():
         return "Error: No food item field provided. Please specify a food item (e.g. ?item=tomato)."
 
     # Create an empty list for our results
-    results = get_linked_amazon_products(food_item, amazon_kb_data, amazon_protected_tokens, amazon_entities_with_ids)
+    results = get_linked_amazon_or_sainsburys_products(food_item, amazon_kb_data, amazon_protected_tokens, amazon_entities_with_ids)
+    if results:
+        # Use the jsonify function from Flask to convert our list of
+        # Python dictionaries to the JSON format.
+        return jsonify(results)
+    return jsonify([])
+
+@app.route('/api/food/sainsburys/', methods=['GET'])
+def get_amazon_prices():
+    # print(last_time_loaded_tesco_kb)
+    global last_time_loaded_kb
+    if last_time_loaded_kb and (datetime.now(tz) - last_time_loaded_kb).total_seconds() >= NUMBER_OF_SECONDS:
+        update_tesco_data()
+        update_sainsburys_data()
+
+    # Check if an ID was provided as part of the URL.
+    # If ID is provided, assign it to a variable.
+    # If no item is provided, display an error in the browser.
+    if 'item' in request.args and request.args['item']:
+        food_item = request.args['item']
+    else:
+        return "Error: No food item field provided. Please specify a food item (e.g. ?item=tomato)."
+
+    # Create an empty list for our results
+    results = get_linked_amazon_or_sainsburys_products(food_item, sainsburys_kb_data, sainsburys_protected_tokens, sainsburys_entities_with_ids)
     if results:
         # Use the jsonify function from Flask to convert our list of
         # Python dictionaries to the JSON format.
@@ -120,5 +161,5 @@ def index():
 
 if __name__ == '__main__':
     update_tesco_data()
-    update_amazon_data()
+    update_sainsburys_data()
     app.run(debug=True, host='0.0.0.0')
