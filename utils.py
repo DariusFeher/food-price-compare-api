@@ -202,7 +202,7 @@ def get_linked_tesco_products(mention, kb_data, kb_tokens):
     products = sorted(products, key=lambda d: d['price']) 
     return products
 
-def get_linked_amazon_products(mention, kb_data, kb_tokens, kb_entities):
+def get_linked_british_online_supermarket_products(mention, kb_data, kb_tokens, kb_entities):
     copy_mention = mention
     mention = clean_mention(mention)
     entities_similarities = []
