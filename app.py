@@ -37,9 +37,8 @@ connection = psycopg2.connect(user=os.environ.get('DB_USER'),
                               host=os.environ.get('DB_HOST'),
                               port=os.environ.get('DB_PORT'),
                               database=os.environ.get('DB_NAME'))
-cursor = connection.cursor()
-
 def update_tesco_data():
+    cursor = connection.cursor()
     global tesco_kb_data, tesco_protected_tokens, last_time_loaded_kb
     insert_query = """SELECT protected_tokens, products_data
                       FROM supermarkets_data_tescodata;"""
@@ -52,6 +51,8 @@ def update_tesco_data():
         last_time_loaded_kb = datetime.now(tz)
 
 def update_amazon_data():
+    cursor = connection.cursor()
+
     global amazon_kb_data, amazon_protected_tokens, last_time_loaded_kb, amazon_entities_with_ids
     insert_query = """SELECT protected_tokens, products_data, products_entities
                       FROM supermarkets_data_amazondata;"""
@@ -67,6 +68,7 @@ def update_amazon_data():
         print(len(amazon_entities_with_ids))
 
 def update_british_online_supermarket_data():
+    cursor = connection.cursor()
     global british_online_supermarket_kb_data, british_online_supermarket_protected_tokens, last_time_loaded_kb, british_online_supermarket_entities_with_ids
     insert_query = """SELECT protected_tokens, products_data, products_entities
                     FROM supermarkets_data_britishonlinesupermarketdata;"""
