@@ -3,6 +3,7 @@ import io
 import json
 import os
 import pickle
+from sqlite3 import connect
 import string
 import time
 from datetime import datetime
@@ -32,12 +33,13 @@ NUMBER_OF_SECONDS = 86400 # Seconds in a day / 24hrs
 
 last_time_loaded_kb = None
 
-connection = psycopg2.connect(user=os.environ.get('DB_USER'),
+
+def update_tesco_data():
+    connection = psycopg2.connect(user=os.environ.get('DB_USER'),
                               password=os.environ.get('DB_PASSWORD'),
                               host=os.environ.get('DB_HOST'),
                               port=os.environ.get('DB_PORT'),
                               database=os.environ.get('DB_NAME'))
-def update_tesco_data():
     cursor = connection.cursor()
     global tesco_kb_data, tesco_protected_tokens, last_time_loaded_kb
     insert_query = """SELECT protected_tokens, products_data
@@ -49,8 +51,14 @@ def update_tesco_data():
         tesco_kb_data = record[1]
         tesco_protected_tokens = set(record[0])
         last_time_loaded_kb = datetime.now(tz)
+    connection.close()
 
 def update_amazon_data():
+    connection = psycopg2.connect(user=os.environ.get('DB_USER'),
+                              password=os.environ.get('DB_PASSWORD'),
+                              host=os.environ.get('DB_HOST'),
+                              port=os.environ.get('DB_PORT'),
+                              database=os.environ.get('DB_NAME'))
     cursor = connection.cursor()
 
     global amazon_kb_data, amazon_protected_tokens, last_time_loaded_kb, amazon_entities_with_ids
@@ -66,8 +74,14 @@ def update_amazon_data():
         print(len(amazon_kb_data))
         print(len(amazon_protected_tokens))
         print(len(amazon_entities_with_ids))
+    connection.close()
 
 def update_british_online_supermarket_data():
+    connection = psycopg2.connect(user=os.environ.get('DB_USER'),
+                              password=os.environ.get('DB_PASSWORD'),
+                              host=os.environ.get('DB_HOST'),
+                              port=os.environ.get('DB_PORT'),
+                              database=os.environ.get('DB_NAME'))
     cursor = connection.cursor()
     global british_online_supermarket_kb_data, british_online_supermarket_protected_tokens, last_time_loaded_kb, british_online_supermarket_entities_with_ids
     insert_query = """SELECT protected_tokens, products_data, products_entities
@@ -82,6 +96,7 @@ def update_british_online_supermarket_data():
         print(len(british_online_supermarket_kb_data))
         print(len(british_online_supermarket_protected_tokens))
         print(len(british_online_supermarket_entities_with_ids))
+    connection.close()
 
 @app.route('/api/food/tesco/', methods=['GET'])
 def get_tesco_prices():
@@ -159,6 +174,7 @@ def index():
     return 'Food price comparator Interface'
 
 if __name__ == '__main__':
+    from waitress import serve
     update_tesco_data()
     update_british_online_supermarket_data()
-    app.run(debug=True, host='0.0.0.0')
+    serve(app, host='0.0.0.0')
