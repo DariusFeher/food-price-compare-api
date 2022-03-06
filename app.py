@@ -175,4 +175,4 @@ def index():
 if __name__ == '__main__':
     update_tesco_data()
     update_british_online_supermarket_data()
-    app.run(debug=False)
+    app.run(debug=True, host='0.0.0.0')
