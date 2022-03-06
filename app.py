@@ -31,8 +31,7 @@ app = Flask(__name__)
 
 NUMBER_OF_SECONDS = 86400 # Seconds in a day / 24hrs
 
-last_time_loaded_kb = None
-
+tesco_kb_data = tesco_protected_tokens = british_online_supermarket_kb_data = british_online_supermarket_protected_tokens = last_time_loaded_kb = british_online_supermarket_entities_with_ids = None
 
 def update_tesco_data():
     connection = psycopg2.connect(user=os.environ.get('DB_USER'),
@@ -174,7 +173,6 @@ def index():
     return 'Food price comparator Interface'
 
 if __name__ == '__main__':
-    from waitress import serve
     update_tesco_data()
     update_british_online_supermarket_data()
-    serve(app, host='0.0.0.0')
+    app.run(debug=False)
