@@ -31,7 +31,7 @@ app = Flask(__name__)
 
 NUMBER_OF_SECONDS = 86400 # Seconds in a day / 24hrs
 
-tesco_kb_data = tesco_protected_tokens = british_online_supermarket_kb_data = british_online_supermarket_protected_tokens = last_time_loaded_kb = british_online_supermarket_entities_with_ids = None
+tesco_kb_data = tesco_protected_tokens = british_online_supermarket_kb_data = british_online_supermarket_protected_tokens = british_online_supermarket_entities_with_ids = last_time_loaded_kb = None
 
 def update_tesco_data():
     connection = psycopg2.connect(user=os.environ.get('DB_USER'),
@@ -40,7 +40,7 @@ def update_tesco_data():
                               port=os.environ.get('DB_PORT'),
                               database=os.environ.get('DB_NAME'))
     cursor = connection.cursor()
-    global tesco_kb_data, tesco_protected_tokens, last_time_loaded_kb
+    global tesco_kb_data, tesco_protected_tokens
     insert_query = """SELECT protected_tokens, products_data
                       FROM supermarkets_data_tescodata;"""
     cursor.execute(insert_query)
@@ -49,7 +49,6 @@ def update_tesco_data():
     if record:
         tesco_kb_data = record[1]
         tesco_protected_tokens = set(record[0])
-        last_time_loaded_kb = datetime.now(tz)
     connection.close()
 
 def update_amazon_data():
@@ -60,7 +59,7 @@ def update_amazon_data():
                               database=os.environ.get('DB_NAME'))
     cursor = connection.cursor()
 
-    global amazon_kb_data, amazon_protected_tokens, last_time_loaded_kb, amazon_entities_with_ids
+    global amazon_kb_data, amazon_protected_tokens, amazon_entities_with_ids
     insert_query = """SELECT protected_tokens, products_data, products_entities
                       FROM supermarkets_data_amazondata;"""
     cursor.execute(insert_query)
@@ -82,7 +81,7 @@ def update_british_online_supermarket_data():
                               port=os.environ.get('DB_PORT'),
                               database=os.environ.get('DB_NAME'))
     cursor = connection.cursor()
-    global british_online_supermarket_kb_data, british_online_supermarket_protected_tokens, last_time_loaded_kb, british_online_supermarket_entities_with_ids
+    global british_online_supermarket_kb_data, british_online_supermarket_protected_tokens, british_online_supermarket_entities_with_ids
     insert_query = """SELECT protected_tokens, products_data, products_entities
                     FROM supermarkets_data_britishonlinesupermarketdata;"""
     cursor.execute(insert_query)
@@ -99,12 +98,6 @@ def update_british_online_supermarket_data():
 
 @app.route('/api/food/tesco/', methods=['GET'])
 def get_tesco_prices():
-    # print(last_time_loaded_tesco_kb)
-    global last_time_loaded_kb
-    if last_time_loaded_kb and (datetime.now(tz) - last_time_loaded_kb).total_seconds() >= NUMBER_OF_SECONDS:
-        update_tesco_data()
-        update_british_online_supermarket_data()
-
     # Check if an ID was provided as part of the URL.
     # If ID is provided, assign it to a variable.
     # If no item is provided, display an error in the browser.
@@ -146,12 +139,6 @@ def get_tesco_prices():
 
 @app.route('/api/food/britishOnlineSupermarket/', methods=['GET'])
 def get_british_online_supermarket_prices():
-    # print(last_time_loaded_tesco_kb)
-    global last_time_loaded_kb
-    if last_time_loaded_kb and (datetime.now(tz) - last_time_loaded_kb).total_seconds() >= NUMBER_OF_SECONDS:
-        update_tesco_data()
-        update_british_online_supermarket_data()
-
     # Check if an ID was provided as part of the URL.
     # If ID is provided, assign it to a variable.
     # If no item is provided, display an error in the browser.
@@ -167,12 +154,17 @@ def get_british_online_supermarket_prices():
         # Python dictionaries to the JSON format.
         return jsonify(results)
     return jsonify([])
-    
+
+@app.route('/update_kbs', methods=['GET'])
+def update_kbs():
+    update_tesco_data()
+    update_british_online_supermarket_data()
+    print('Knowledge Bases updated!')
+    return 'Knowledge Bases Updated'
+
 @app.route('/', methods=['GET'])
 def index():
     return 'Food price comparator Interface'
 
 if __name__ == '__main__':
-    update_tesco_data()
-    update_british_online_supermarket_data()
     app.run(debug=True, host='0.0.0.0')
